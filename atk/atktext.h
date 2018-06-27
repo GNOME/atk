@@ -27,6 +27,7 @@
 #include <glib-object.h>
 #include <atk/atkobject.h>
 #include <atk/atkutil.h>
+#include <atk/atkcomponent.h>
 
 G_BEGIN_DECLS
 
@@ -333,6 +334,20 @@ struct _AtkTextIface
                                                    AtkTextGranularity granularity,
                                                    gint               *start_offset,
                                                    gint               *end_offset);
+  /*
+   * Scrolls this range so it becomes visible on the screen.
+   * Since ATK 2.32
+   */
+  gboolean       (* scroll_substring_to)          (AtkText          *text,
+                                                   gint             start_offset,
+                                                   gint             end_offset,
+                                                   AtkScrollType    type);
+  gboolean       (* scroll_substring_to_point)    (AtkText          *text,
+                                                   gint             start_offset,
+                                                   gint             end_offset,
+                                                   AtkCoordType     coords,
+                                                   gint             x,
+                                                   gint             y);
 };
 
 ATK_AVAILABLE_IN_ALL
@@ -447,6 +462,20 @@ AtkTextAttribute       atk_text_attribute_for_name        (const gchar      *nam
 ATK_AVAILABLE_IN_ALL
 const gchar*  atk_text_attribute_get_value                (AtkTextAttribute attr,
                                                            gint             index_);
+
+ATK_AVAILABLE_IN_ALL
+gboolean      atk_text_scroll_substring_to                (AtkText          *text,
+                                                           gint             start_offset,
+                                                           gint             end_offset,
+                                                           AtkScrollType    type);
+
+ATK_AVAILABLE_IN_ALL
+gboolean      atk_text_scroll_substring_to_point          (AtkText          *text,
+                                                           gint             start_offset,
+                                                           gint             end_offset,
+                                                           AtkCoordType     coords,
+                                                           gint             x,
+                                                           gint             y);
 
 G_END_DECLS
 
