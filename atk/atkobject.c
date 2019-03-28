@@ -57,6 +57,12 @@
  *
  */
 
+typedef struct {
+  AtkAttributeSet *attributes;
+} AtkObjectPrivate;
+
+static gint AtkObject_private_offset;
+
 static GPtrArray *role_names = NULL;
 
 enum
@@ -249,8 +255,14 @@ static void            atk_object_real_set_role    (AtkObject       *object,
                                                     AtkRole         role);
 static void            atk_object_notify           (GObject         *obj,
                                                     GParamSpec      *pspec);
+static AtkAttributeSet *atk_object_real_get_attributes
+                                                   (AtkObject       *accessible);
 static const gchar*    atk_object_real_get_object_locale
                                                    (AtkObject       *object);
+static void            atk_object_real_set_attribute
+                                                   (AtkObject       *accessible,
+                                                    const gchar     *name,
+                                                    const gchar     *value);
 
 static guint atk_object_signals[LAST_SIGNAL] = { 0, };
 
@@ -321,8 +333,17 @@ atk_object_get_type (void)
         (GInstanceInitFunc) atk_object_init,
       } ;
       type = g_type_register_static (G_TYPE_OBJECT, "AtkObject", &typeInfo, 0) ;
+
+      AtkObject_private_offset =
+        g_type_add_instance_private (type, sizeof (AtkObjectPrivate));
     }
   return type;
+}
+
+static inline gpointer
+atk_object_get_instance_private (AtkObject *self)
+{
+  return (G_STRUCT_MEMBER_P (self, AtkObject_private_offset));
 }
 
 static void
@@ -331,6 +352,9 @@ atk_object_class_init (AtkObjectClass *klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
   parent_class = g_type_class_peek_parent (klass);
+
+  if (AtkObject_private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &AtkObject_private_offset);
 
   gobject_class->set_property = atk_object_real_set_property;
   gobject_class->get_property = atk_object_real_get_property;
@@ -353,7 +377,9 @@ atk_object_class_init (AtkObjectClass *klass)
   klass->set_description = atk_object_real_set_description;
   klass->set_parent = atk_object_real_set_parent;
   klass->set_role = atk_object_real_set_role;
+  klass->get_attributes = atk_object_real_get_attributes;
   klass->get_object_locale = atk_object_real_get_object_locale;
+  klass->set_attribute = atk_object_real_set_attribute;
 
   /*
    * We do not define default signal handlers here
@@ -675,6 +701,9 @@ atk_object_init  (AtkObject        *accessible,
   accessible->accessible_parent = NULL;
   accessible->relation_set = atk_relation_set_new();
   accessible->role = ATK_ROLE_UNKNOWN;
+
+  AtkObjectPrivate *private = atk_object_get_instance_private (accessible);
+  private->attributes = NULL;
 }
 
 GType
@@ -1281,6 +1310,32 @@ atk_object_get_attributes (AtkObject                  *accessible)
 	
 }
 
+/**
+ * atk_object_set_attribute:
+ * @accessible: An #AtkObject.
+ * @name: The name of the attribute to be set.
+ * @value: The value of the attribute to be set.
+ *
+ * Add an attribute to the list of #AtkAttributeSet properties (as returned by
+ * atk_object_get_attributes).  If a previous attribute of the same name was
+ * already set, its value is replaced.
+ *
+ * Since: 2.34
+ */
+void
+atk_object_set_attribute (AtkObject *accessible,
+                          const gchar *name,
+                          const gchar *value)
+{
+  AtkObjectClass *klass;
+
+  g_return_if_fail (ATK_IS_OBJECT (accessible));
+
+  klass = ATK_OBJECT_GET_CLASS (accessible);
+  if (klass->set_attribute)
+    (klass->set_attribute) (accessible, name, value);
+}
+
 static AtkRelationSet*
 atk_object_real_ref_relation_set (AtkObject *accessible)
 {
@@ -1288,6 +1343,52 @@ atk_object_real_ref_relation_set (AtkObject *accessible)
   g_object_ref (accessible->relation_set); 
 
   return accessible->relation_set;
+}
+
+AtkAttributeSet *
+atk_object_real_get_attributes (AtkObject *accessible)
+{
+  AtkObjectPrivate *private = atk_object_get_instance_private (accessible);
+  AtkAttributeSet *attributes;
+  AtkAttributeSet *elem;
+
+  attributes = NULL;
+  for (elem = private->attributes; elem; elem = elem->next)
+    {
+      AtkAttribute *attribute = elem->data;
+      AtkAttribute *new_attribute = g_new (AtkAttribute, 1);
+      new_attribute->name = g_strdup (attribute->name);
+      new_attribute->value = g_strdup (attribute->value);
+      attributes = g_slist_prepend (attributes, new_attribute);
+    }
+
+  return g_slist_reverse (attributes);
+}
+
+void
+atk_object_real_set_attribute (AtkObject *accessible,
+                               const gchar *name,
+                               const gchar *value)
+{
+  AtkObjectPrivate *private = atk_object_get_instance_private (accessible);
+  AtkAttributeSet *elem;
+  AtkAttribute *attribute;
+
+  for (elem = private->attributes; elem; elem = elem->next)
+    {
+      attribute = elem->data;
+      if (g_strcmp0 (attribute->name, name) == 0)
+	{
+	  g_free (attribute->value);
+	  attribute->value = g_strdup (value);
+	  return;
+	}
+    }
+
+  attribute = g_new (AtkAttribute, 1);
+  attribute->name = g_strdup (name);
+  attribute->value = g_strdup (value);
+  private->attributes = g_slist_append (private->attributes, attribute);
 }
 
 static void
@@ -1385,14 +1486,24 @@ atk_object_real_get_property (GObject      *object,
     }
 }
 
+static void free_attribute (gpointer data)
+{
+  AtkAttribute *attribute = data;
+
+  g_free (attribute->name);
+  g_free (attribute->value);
+}
+
 static void
 atk_object_finalize (GObject *object)
 {
   AtkObject        *accessible;
+  AtkObjectPrivate *private;
 
   g_return_if_fail (ATK_IS_OBJECT (object));
 
   accessible = ATK_OBJECT (object);
+  private = atk_object_get_instance_private (accessible);
 
   g_free (accessible->name);
   g_free (accessible->description);
@@ -1405,6 +1516,9 @@ atk_object_finalize (GObject *object)
 
   if (accessible->accessible_parent)
     g_object_unref (accessible->accessible_parent);
+
+  if (private->attributes)
+    g_slist_free_full (private->attributes, free_attribute);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
