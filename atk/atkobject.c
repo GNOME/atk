@@ -249,8 +249,14 @@ static void            atk_object_real_set_role    (AtkObject       *object,
                                                     AtkRole         role);
 static void            atk_object_notify           (GObject         *obj,
                                                     GParamSpec      *pspec);
+static AtkAttributeSet *atk_object_real_get_attributes
+                                                   (AtkObject       *accessible);
 static const gchar*    atk_object_real_get_object_locale
                                                    (AtkObject       *object);
+static void            atk_object_real_set_attribute
+                                                   (AtkObject       *accessible,
+                                                    const gchar     *name,
+                                                    const gchar     *value);
 
 static guint atk_object_signals[LAST_SIGNAL] = { 0, };
 
@@ -353,7 +359,9 @@ atk_object_class_init (AtkObjectClass *klass)
   klass->set_description = atk_object_real_set_description;
   klass->set_parent = atk_object_real_set_parent;
   klass->set_role = atk_object_real_set_role;
+  klass->get_attributes = atk_object_real_get_attributes;
   klass->get_object_locale = atk_object_real_get_object_locale;
+  klass->set_attribute = atk_object_real_set_attribute;
 
   /*
    * We do not define default signal handlers here
@@ -675,6 +683,7 @@ atk_object_init  (AtkObject        *accessible,
   accessible->accessible_parent = NULL;
   accessible->relation_set = atk_relation_set_new();
   accessible->role = ATK_ROLE_UNKNOWN;
+  accessible->attributes = NULL;
 }
 
 GType
@@ -1281,6 +1290,32 @@ atk_object_get_attributes (AtkObject                  *accessible)
 	
 }
 
+/**
+ * atk_object_set_attribute:
+ * @accessible: An #AtkObject.
+ * @name: The name of the attribute to be set.
+ * @value: The value of the attribute to be set.
+ *
+ * Add an attribute to the list of #AtkAttributeSet properties (as returned by
+ * atk_object_get_attributes).  If a previous attribute of the same name was
+ * already set, its value is replaced.
+ *
+ * Since: 2.34
+ */
+void
+atk_object_set_attribute (AtkObject *accessible,
+                          const gchar *name,
+                          const gchar *value)
+{
+  AtkObjectClass *klass;
+
+  g_return_if_fail (ATK_IS_OBJECT (accessible));
+
+  klass = ATK_OBJECT_GET_CLASS (accessible);
+  if (klass->set_attribute)
+    (klass->set_attribute) (accessible, name, value);
+}
+
 static AtkRelationSet*
 atk_object_real_ref_relation_set (AtkObject *accessible)
 {
@@ -1288,6 +1323,50 @@ atk_object_real_ref_relation_set (AtkObject *accessible)
   g_object_ref (accessible->relation_set); 
 
   return accessible->relation_set;
+}
+
+AtkAttributeSet *
+atk_object_real_get_attributes (AtkObject *accessible)
+{
+  AtkAttributeSet *attributes;
+  AtkAttributeSet *elem;
+
+  attributes = NULL;
+  for (elem = accessible->attributes; elem; elem = elem->next)
+    {
+      AtkAttribute *attribute = elem->data;
+      AtkAttribute *new_attribute = g_new (AtkAttribute, 1);
+      new_attribute->name = g_strdup (attribute->name);
+      new_attribute->value = g_strdup (attribute->value);
+      attributes = g_slist_prepend (attributes, new_attribute);
+    }
+
+  return g_slist_reverse (attributes);
+}
+
+void
+atk_object_real_set_attribute (AtkObject *accessible,
+                               const gchar *name,
+                               const gchar *value)
+{
+  AtkAttributeSet *elem;
+  AtkAttribute *attribute;
+
+  for (elem = accessible->attributes; elem; elem = elem->next)
+    {
+      attribute = elem->data;
+      if (g_strcmp0 (attribute->name, name) == 0)
+	{
+	  g_free (attribute->value);
+	  attribute->value = g_strdup (value);
+	  return;
+	}
+    }
+
+  attribute = g_new (AtkAttribute, 1);
+  attribute->name = g_strdup (name);
+  attribute->value = g_strdup (value);
+  accessible->attributes = g_slist_append (accessible->attributes, attribute);
 }
 
 static void
@@ -1385,6 +1464,14 @@ atk_object_real_get_property (GObject      *object,
     }
 }
 
+static void free_attribute (gpointer data)
+{
+  AtkAttribute *attribute = data;
+
+  g_free (attribute->name);
+  g_free (attribute->value);
+}
+
 static void
 atk_object_finalize (GObject *object)
 {
@@ -1405,6 +1492,9 @@ atk_object_finalize (GObject *object)
 
   if (accessible->accessible_parent)
     g_object_unref (accessible->accessible_parent);
+
+  if (accessible->attributes)
+    g_slist_free_full (accessible->attributes, free_attribute);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
