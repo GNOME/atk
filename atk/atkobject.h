@@ -508,6 +508,7 @@ struct _AtkObject
   AtkRole role;
   AtkRelationSet *relation_set;
   AtkLayer layer;
+  AtkAttributeSet *attributes;
 };
 
 
@@ -657,7 +658,15 @@ void                      (* initialize)                         (AtkObject     
 
   const gchar*            (*get_object_locale)         (AtkObject                  *accessible);
 
-  AtkFunction             pad1;
+  /*
+   * Add an attribute to the list of #AtkAttributeSet properties (as returned by
+   * atk_object_get_attributes).
+   *
+   * Since ATK 2.34
+   */
+  void                    (*set_attribute)             (AtkObject                  *accessible,
+                                                        const gchar                *name,
+                                                        const gchar                *value);
 };
 
 ATK_AVAILABLE_IN_ALL
@@ -711,6 +720,10 @@ gint                    atk_object_get_mdi_zorder                 (AtkObject *ac
 
 ATK_AVAILABLE_IN_ALL
 AtkAttributeSet*        atk_object_get_attributes                 (AtkObject *accessible);
+ATK_AVAILABLE_IN_ALL
+void                    atk_object_set_attribute                  (AtkObject *accessible,
+                                                                   const gchar *name,
+                                                                   const gchar *value);
 ATK_AVAILABLE_IN_ALL
 AtkStateSet*            atk_object_ref_state_set                  (AtkObject *accessible);
 ATK_AVAILABLE_IN_ALL
