@@ -99,24 +99,6 @@ glib_dep = [dependency('glib-2.0', version: glib_req_version,
             dependency('gobject-2.0', version: glib_req_version,
                           fallback : ['glib', 'libgobject_dep'])]
 
-# Compat variables for pkgconfig
-pkgconf = configuration_data()
-pkgconf.set('prefix', atk_prefix)
-pkgconf.set('exec_prefix', atk_prefix)
-pkgconf.set('libdir', atk_libdir)
-pkgconf.set('includedir', atk_includedir)
-pkgconf.set('VERSION', meson.project_version())
-pkgconf.set('ATK_API_VERSION', atk_api_version)
-pkgconf.set('srcdir', '.')
-
-foreach pkg: [ 'atk.pc', ]
-  configure_file(input: pkg + '.in',
-                 output: pkg,
-                 configuration: pkgconf,
-                 install: true,
-                 install_dir: join_paths(atk_libdir, 'pkgconfig'))
-endforeach
-
 gnome = import('gnome')
 
 # Internal configuration header

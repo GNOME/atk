@@ -153,3 +153,13 @@ if not meson.is_cross_build() and get_option('introspection')
                        '-DATK_COMPILATION',
                      ])
 endif
+
+pkg = import('pkgconfig')
+pkg.generate(
+  libatk,
+  name: 'Atk',
+  description: 'Accessibility Toolkit',
+  requires: 'gobject-2.0',
+  filebase: 'atk',
+  subdirs: 'atk-1.0',
+)
