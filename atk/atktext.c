@@ -1028,6 +1028,13 @@ atk_text_set_selection (AtkText *text,
  *
  * Sets the caret (cursor) position to the specified @offset.
  *
+ * Note: If the specified offset is not visible on the screen, implementors
+ * should scroll the content into view. The exact location to which the
+ * content is scrolled is application-dependent. However, scrolling should
+ * be consistent with the scrolling behavior seen when the caret is set or
+ * the widget given focus through native support such as the use of the arrow
+ * keys or the Tab key.
+ *
  * Returns: %TRUE if successful, %FALSE otherwise.
  **/
 gboolean
