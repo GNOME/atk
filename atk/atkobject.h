@@ -220,10 +220,10 @@ G_BEGIN_DECLS
  *@ATK_ROLE_FOOTNOTE: An object that contains the text of a footnote. @Since: ATK-2.26.
  *@ATK_ROLE_CONTENT_DELETION: Content previously deleted or proposed to be
  * deleted, e.g. in revision history or a content view providing suggestions
- * from reviewers. @Since: ATK-3.34.
+ * from reviewers. @Since: ATK-2.34.
  *@ATK_ROLE_CONTENT_INSERTION: Content previously inserted or proposed to be
  * inserted, e.g. in revision history or a content view providing suggestions
- * from reviewers. @Since: ATK-3.34.
+ * from reviewers. @Since: ATK-2.34.
  *@ATK_ROLE_LAST_DEFINED: not a valid role, used for finding end of the enumeration
  *
  * Describes the role of an object
