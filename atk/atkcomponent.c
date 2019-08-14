@@ -294,6 +294,13 @@ atk_component_get_extents    (AtkComponent    *component,
 
   if (iface->get_extents)
     (iface->get_extents) (component, real_x, real_y, real_width, real_height, coord_type);
+  else
+    {
+      *real_x = -1;
+      *real_y = -1;
+      *real_width = -1;
+      *real_height = -1;
+    }
 }
 
 /**
@@ -334,6 +341,11 @@ atk_component_get_position   (AtkComponent    *component,
 
   if (iface->get_position)
     (iface->get_position) (component, real_x, real_y, coord_type);
+  else
+    {
+      *real_x = -1;
+      *real_y = -1;
+    }
 }
 
 /**
@@ -372,6 +384,11 @@ atk_component_get_size       (AtkComponent    *component,
 
   if (iface->get_size)
     (iface->get_size) (component, real_width, real_height);
+  else
+    {
+      *real_width = -1;
+      *real_height = -1;
+    }
 }
 
 /**

@@ -1081,6 +1081,13 @@ atk_text_get_range_extents (AtkText          *text,
 
   if (iface->get_range_extents)
     (*(iface->get_range_extents)) (text, start_offset, end_offset, coord_type, rect);
+  else
+    {
+      rect->x = -1;
+      rect->y = -1;
+      rect->width = -1;
+      rect->height = -1;
+    }
 }
 
 /**
