@@ -1328,6 +1328,17 @@ atk_text_rectangle_union (AtkTextRectangle *src1,
 {
   gint dest_x, dest_y;
 
+  if (src1->width == -1)
+    {
+      *dest = *src2;
+      return;
+    }
+  if (src2->width == -1)
+    {
+      *dest = *src1;
+      return;
+    }
+
   dest_x = MIN (src1->x, src2->x);
   dest_y = MIN (src1->y, src2->y);
   dest->width = MAX (src1->x + src1->width, src2->x + src2->width) - dest_x;
