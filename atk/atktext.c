@@ -1380,10 +1380,6 @@ atk_text_rectangle_contain (AtkTextRectangle *clip,
  *
  * Makes @text visible on the screen by scrolling all necessary parents.
  *
- * Contrary to atk_text_set_position, this does not actually move
- * @text in its parent, this only makes the parents scroll so that the
- * object shows up on the screen, given its current position within the parents.
- *
  * Since: 2.32
  *
  * Returns: whether scrolling was successful.
