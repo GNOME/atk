@@ -81,13 +81,21 @@ if host_machine.system() == 'darwin'
   common_ldflags += [ '-compatibility_version', darwin_versions[0], '-current_version', darwin_versions[1]]
 endif
 
+# The gettext functions may not be necessarily
+# included in the CRT, so look for libintl
+# if that is the case
+intl_dep = []
+if not cc.has_function('ngettext')
+  intl_dep = cc.find_library('intl', required: false)
+endif
+
 # Functions
 checked_funcs = [
   'bind_textdomain_codeset',
 ]
 
 foreach f: checked_funcs
-  if cc.has_function(f)
+  if cc.has_function(f, dependencies: intl_dep)
     atk_conf.set('HAVE_' + f.underscorify().to_upper(), 1)
   endif
 endforeach
